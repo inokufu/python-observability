@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier
+_commit: 22e21d5
+_src_path: git@github.com:inokufu/python-project-template.git
+author_email: contact@inokufu.com
+author_name: Inokufu
+min_python_version: '3.14'
+package_name: observability
+project_description: Error and performance monitoring, over the Sentry protocol or
+    OpenTelemetry
+project_name: Observability

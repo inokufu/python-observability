@@ -1,0 +1,80 @@
+[project]
+name = "observability"
+version = "0.1.0"
+description = "Error and performance monitoring, over the Sentry protocol or OpenTelemetry"
+authors = [
+  { name = "Inokufu", email = "contact@inokufu.com" }
+]
+readme = "docs/README.md"
+requires-python = ">= 3.14"
+
+dependencies = [
+]
+
+[tool.uv]
+add-bounds = "major"
+package = true
+
+[dependency-groups]
+dev = [
+    "diff-cover>=11.0.0,<12.0.0",
+    "griffe-inherited-docstrings>=1.1.4,<2.0.0",
+    "mkdocs>=1.6.1,<2.0.0",
+    "mkdocs-material>=9.8.0,<10.0.0",
+    "mkdocstrings-python>=2.0.10,<3.0.0",
+    "prek>=0.5.8,<0.6.0",
+    "pytest>=9.2.0,<10.0.0",
+    "pytest-cov>=7.1.0,<8.0.0",
+    "pytest-mock>=3.17.0,<4.0.0",
+    "ruff>=0.17.3,<0.18.0",
+    "ty>=0.0.95,<0.0.96",
+]
+
+[tool.ruff]
+output-format = "concise"
+target-version = "py314"
+line-length = 88
+indent-width = 4
+
+lint.pydocstyle.convention = "google"
+lint.flake8-bandit.check-typed-exception = true
+lint.flake8-type-checking.strict = true
+
+lint.select = ["ALL"]
+lint.ignore = [
+  "PLE1205", # logging-too-many-args
+  "D100", # pydocstyle
+  "EM", # flake8-errmsg
+  "INP001", # implicit-namespace-package
+  "TRY003", # raise-vanilla-args
+  "TRY401", # verbose-log-message
+  "CPY", # flake8-copyright
+]
+lint.extend-unfixable = [
+  "TC002", # typing-only-third-party-import
+  "TRY400", # error-instead-of-exception
+  "SIM105", # suppressible-exception
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = [
+    "S101", # Asserts allowed in tests...
+    "ARG", # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT", # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    "PLR2004", # Magic value used in comparison, ...
+    "S311", # Standard pseudo-random generators are not suitable for cryptographic purposes
+    "S105", # Hardcoded secrets are dummy test fixtures...
+    "S106", # ...idem for secrets passed as arguments
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+addopts = ["--cov=src", "--cov-report=term-missing", "--cov-report=xml"]
+
+[tool.coverage.report]
+exclude_also = [
+  "@(abc\\.)?abstractmethod",
+]
+
+[tool.diff_cover]
+fail_under = 90

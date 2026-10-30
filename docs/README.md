@@ -1,0 +1,68 @@
+# Observability
+
+[![Python](https://img.shields.io/badge/Python-FFD43B?logo=python)](https://www.python.org/)
+![License](https://img.shields.io/badge/GPL--3.0-red?logo=gnu)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-E6F0FF?logo=githubactions)](https://github.com/features/actions)
+[![Pytest](https://img.shields.io/badge/pytest-E6F7FF?logo=pytest)](https://docs.pytest.org/)
+[![EditorConfig](https://img.shields.io/badge/EditorConfig-333333?logo=editorconfig)](https://editorconfig.org/)
+[![uv](https://img.shields.io/badge/uv-261230?logo=astral)](https://docs.astral.sh/uv/)
+[![Ruff](https://img.shields.io/badge/Ruff-3A3A3A?logo=ruff)](https://docs.astral.sh/ruff/)
+[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
+[![Prek](https://img.shields.io/badge/prek-F54327?logo=prek)](https://prek.j178.dev/)
+[![Makefile](https://img.shields.io/badge/Makefile-427819?logo=gnu)](https://www.gnu.org/software/make/manual/make.html)
+[![MkDocs](https://img.shields.io/badge/MkDocs-526CFE?logo=markdown)](https://www.mkdocs.org/)
+[![Dependabot](https://img.shields.io/badge/Dependabot-025E8C?logo=dependabot)](https://docs.github.com/code-security/dependabot)
+[![gitleaks](https://img.shields.io/badge/gitleaks-C0392B)](https://github.com/gitleaks/gitleaks)
+[![zizmor](https://img.shields.io/badge/zizmor-6E40C9)](https://docs.zizmor.sh/)
+
+## Overview
+
+Error and performance monitoring, over the Sentry protocol or OpenTelemetry
+
+## Setup and installation
+
+### Prerequisites
+
+- Python 3.14 or higher
+- [uv](https://docs.astral.sh/uv/) for dependency management
+
+### Installation
+
+## Usage
+
+## Development
+
+`make help` lists every command.
+
+### Code Formatting and Linting
+
+```sh
+make format  # Ruff format + fix
+make lint    # Ruff lint
+```
+
+### Environment Variables
+
+| Variable | Description | Required | Default Value | Possible Values |
+|----------|-------------|----------|---------------|-----------------|
+
+### Architecture
+
+## Contributing
+
+We welcome contributions to this project! Please see
+the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to
+contribute, including:
+
+- How to set up your development environment
+- Coding standards and style guidelines
+- Pull request process
+- Testing requirements
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0) -
+see the LICENSE file for details.
+
+GPL-3.0 is a strong copyleft license that requires anyone who distributes your
+code or a derivative work to make the source available under the same terms.
