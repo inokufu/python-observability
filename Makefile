@@ -3,12 +3,18 @@
 # Check if uv is installed
 UV_COMMAND := $(shell command -v uv 2> /dev/null)
 
+# Coverage floor of make test and make diff-cover
+COV_MIN ?= 90
+
+# Branch that make diff-cover compares with
+COMPARE_BRANCH ?= origin/main
+
 .PHONY: help
 help: ## Display this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: all
-all: check-uv install format lint check ## Build everything
+all: check-uv format check ## Build everything
 
 .PHONY: check-uv
 check-uv: ## Check if uv is installed
@@ -17,12 +23,15 @@ ifndef UV_COMMAND
 endif
 
 .PHONY: install
-install: check-uv pyproject.toml ## Synchronize dependencies
+# Hooks need a git repository, absent from a Docker build for instance
+install: check-uv pyproject.toml ## Synchronize dependencies and install the git hooks
 	uv sync
+	@if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo "Not a git repository: git hooks not installed"; \
+	elif [ -n "$$(git config core.hooksPath)" ]; then echo "core.hooksPath is set: git hooks not installed"; \
+	else uv run -- prek install; fi
 
 .PHONY: init
-init: check-uv pyproject.toml .pre-commit-config.yaml install ## Initialize project (first installation)
-	uv run -- prek install
+init: check-uv install ## Initialize project (first installation)
 	cp .env.example .env || true
 
 .PHONY: format
@@ -42,23 +51,22 @@ typecheck: check-uv ## Run type checking with ty
 # Floor here: in pyproject it would fail a partial run
 # Exit code 5 means no test was collected, which is not a failure on a new project
 test: check-uv tests ## Run tests with coverage
-	uv run -- pytest --cov-fail-under=90 || [ $$? -eq 5 ]
+	uv run -- pytest --cov-fail-under=$(COV_MIN) || [ $$? -eq 5 ]
 
 .PHONY: diff-cover
-# Skipped until origin/main exists, as on a project not pushed yet
-diff-cover: check-uv coverage.xml ## Show coverage of recent changes (reads the last make test)
-	@if git rev-parse --verify -q origin/main >/dev/null; then \
-		uv run -- diff-cover coverage.xml -c pyproject.toml; \
-	else \
-		echo "No origin/main: nothing to compare"; \
-	fi
+# Skipped until COMPARE_BRANCH exists, as on a project not pushed yet
+diff-cover: check-uv ## Show coverage of recent changes (reads the last make test)
+	@test -f coverage.xml || { echo "No coverage.xml: run make test first"; exit 1; }
+	@if git rev-parse --verify -q $(COMPARE_BRANCH) >/dev/null; then \
+		uv run -- diff-cover coverage.xml --compare-branch $(COMPARE_BRANCH) --fail-under $(COV_MIN); \
+	else echo "No $(COMPARE_BRANCH): nothing to compare"; fi
 
 .PHONY: precommit
 precommit: check-uv install ## Run prek on all files
 	uv run -- prek run --all-files
 
 .PHONY: check
-check: check-uv install ## Run all checks (precommit + test + diff-cover)
+check: check-uv ## Run all checks (precommit + test + diff-cover)
 	$(MAKE) precommit
 	$(MAKE) test
 	$(MAKE) diff-cover

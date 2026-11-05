@@ -41,6 +41,12 @@ make format  # Ruff format + fix
 make lint    # Ruff lint
 ```
 
+### Git Hooks
+
+`make install` installs them in a git repository, but `git commit --no-verify` skips
+them. On GitHub, require the `Lint` and `Test Python` checks on `main`,
+and enable secret push protection.
+
 ### Environment Variables
 
 | Variable | Description | Required | Default Value | Possible Values |
