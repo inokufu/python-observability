@@ -25,14 +25,13 @@ endif
 .PHONY: install
 # Hooks need a git repository, absent from a Docker build for instance
 install: check-uv pyproject.toml ## Synchronize dependencies and install the git hooks
-	uv sync
+	uv sync --all-extras
 	@if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo "Not a git repository: git hooks not installed"; \
 	elif [ -n "$$(git config core.hooksPath)" ]; then echo "core.hooksPath is set: git hooks not installed"; \
 	else uv run -- prek install; fi
 
 .PHONY: init
 init: check-uv install ## Initialize project (first installation)
-	cp .env.example .env || true
 
 .PHONY: format
 format: check-uv ## Format code
