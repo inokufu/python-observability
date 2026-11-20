@@ -15,6 +15,7 @@ from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from opentelemetry.trace.span import TraceState
 from opentelemetry.util.types import Attributes
 
+from observability.adapters.urls import origin
 from observability.domain.contract import ContextValue, MonitoringContract
 
 # Default names, then stable ones (OTEL_SEMCONV_STABILITY_OPT_IN). A WSGI
@@ -29,13 +30,17 @@ _CLIENT_KEYS = (
 
 
 def _scrubbed(span: ReadableSpan) -> ReadableSpan:
-    """Remove query strings, which may hold an address or an id, and the client."""
+    """Remove query strings, outgoing paths and the client: they may hold an id."""
     attributes = dict(span.attributes or {})
     attributes.pop("url.query", None)
     for key in _URL_KEYS:
         url = attributes.get(key)
         if isinstance(url, str):
-            attributes[key] = url.split(sep="?", maxsplit=1)[0]
+            attributes[key] = (
+                origin(url)
+                if span.kind == SpanKind.CLIENT
+                else url.split(sep="?", maxsplit=1)[0]
+            )
     if span.kind == SpanKind.SERVER:
         for key in _CLIENT_KEYS:
             attributes.pop(key, None)

@@ -106,6 +106,10 @@ Each builder imports its SDK only when called with a destination, so the other
 extra need not be installed. The OTLP endpoint is the base URL: `/v1/traces` is
 appended.
 
+`release` takes the version alone. The Sentry format sends it as
+`<service_name>@<release>`, `billing@1.2.3` here, since an organization's projects
+share their releases. The OTLP format sends it as `service.version`.
+
 Hand it the database engine right after creating it, synchronous or async:
 
 ```python
@@ -135,7 +139,8 @@ having no span.
 `log_breadcrumbs=True` attaches the service's log records, `INFO` and above, to the
 next Sentry event, so an error arrives with what led to it. They still never become
 events. Leave it off when logs may hold personal data: the record's message and its
-extra fields (loguru's `extra`, the `extra` of `logging`) are sent as they are.
+extra fields (loguru's `extra`, the `extra` of `logging`) are sent as they are. So
+is the URL httpx logs for each request at `INFO`, path and query included.
 
 ### Report a server error
 
@@ -225,18 +230,25 @@ monitoring = MagicMock(spec=MonitoringContract)
 | Spans the service creates | Through `sentry_sdk`, outside the contract | Through `trace.get_tracer()`, scrubbed like the rest |
 | Trace headers | Only to URLs matching `trace_propagation_targets` | `traceparent`, and any incoming `baggage`, to every outgoing request |
 | Query strings | Not collected, and removed from outgoing spans and breadcrumbs | Removed from every URL |
+| Outgoing URLs | Host only, in spans and breadcrumbs | Host only, on client spans |
+| Exception messages | Not sent: the type and stack trace are | Sent |
 | Client IP, user agent | Not collected | Removed from server spans |
+
+A URL naming no host, such as `/next`, keeps its path without its query.
 
 `traceparent` only carries random identifiers, and `baggage` is the caller's own
 data. The OpenTelemetry httpx instrumentation offers no way to restrict them per host.
 
+An exception reported without being raised has no stack trace. Its message being
+dropped, the Sentry format can then only group it by type: raise it first, or give
+each failure its own type.
+
 Still sent as they are:
 
-- **URL paths**, in both formats: keep personal data out of them, such as an email in
-  `/users/by-email/...`.
-- **Exception messages**, in both formats. An httpx error quotes its URL, query
-  string included: catch it, or raise your own exception without the URL, when the
-  query may hold personal data.
+- **Incoming URL paths**, in both formats: keep personal data out of them, such as
+  an email in `/users/by-email/...`.
+- **Exception messages (OTLP)**, in the span event and its stack trace. A pydantic
+  error quotes the input it refused, and an httpx error its URL.
 - **Command lines (Sentry).** A subprocess breadcrumb and span carry the whole
   command: pass a password through the environment, not arguments.
 - **SQL error messages (OTLP).** A failed query sends the database's error message
@@ -319,7 +331,8 @@ src/observability/
 ├── adapters/          # one adapter per format
 │   ├── noop.py        # no destination
 │   ├── sentry.py      # the `sentry` extra
-│   └── otlp.py        # the `otlp` extra
+│   ├── otlp.py        # the `otlp` extra
+│   └── urls.py        # what both formats keep of an outgoing URL
 └── builders.py        # build_sentry_monitoring, build_otlp_monitoring
 ```
 

@@ -24,9 +24,10 @@ def build_sentry_monitoring(  # noqa: PLR0913
     untraced paths, whatever sampling decision its caller sent.
 
     Args:
-        service_name: The service, as the tool should name it.
+        service_name: The service, as the tool should name it. Keep it a plain
+            name, such as ``billing``: it also prefixes the release.
         environment: The deployment environment.
-        release: The service version.
+        release: The service version, sent as ``<service_name>@<release>``.
         dsn: Where to send. Empty or ``None``, monitoring does nothing.
         trace_propagation_targets: Regular expressions searched in each outgoing
             URL; only a matching request receives trace headers. Anchor them, such

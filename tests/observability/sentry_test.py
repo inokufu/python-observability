@@ -168,7 +168,7 @@ class TestSentryErrors:
         assert event["tags"]["organization_id"] == "7"
         assert event["tags"]["service"] == SERVICE_NAME
         assert event["environment"] == ENVIRONMENT
-        assert event["release"] == RELEASE
+        assert event["release"] == f"{SERVICE_NAME}@{RELEASE}"
 
     def test_personal_data_is_not_sent(
         self,
@@ -204,23 +204,64 @@ class TestSentryErrors:
         assert source_lines
         assert [key for key, value in options.items() if _collected(value)] == []
 
-    def test_outgoing_query_strings_are_not_sent(
+    def test_outgoing_urls_keep_only_their_host(
         self,
         client: TestClient,
         collector: SentryCollector,
         downstream: Callable[[str], str],
     ) -> None:
-        """If an outgoing URL carries a query string, then nothing should contain it."""
+        """If an outgoing URL has a path or a query, then neither should be sent."""
+        # Arrange
+        url = downstream("/tickets/T-981")
+
         # Act
-        client.get(
-            url="/geocode",
-            params={"url": downstream("/search") + "?q=12+rue+de+la+Paix"},
-        )
+        client.get(url="/geocode", params={"url": url + "?q=12+rue+de+la+Paix"})
 
         # Assert
         sent = collector.sent()
         assert "Paix" not in sent
-        assert "/search" in sent
+        assert "T-981" not in sent
+        assert url.removesuffix("/tickets/T-981") in sent
+
+    def test_values_without_a_url_are_kept(self, collector: SentryCollector) -> None:
+        """If a value names no host, then it should be kept but for its query."""
+        # Arrange
+        monitoring = build_sentry_monitoring(**SERVICE, dsn=collector.dsn)
+
+        # Act
+        with monitoring.monitored_task(name="sync"):
+            with sentry_sdk.start_span(op="http.client", name="aws.s3.GetObject"):
+                pass
+            with sentry_sdk.start_span(op="http.client"):
+                pass
+            sentry_sdk.add_breadcrumb(
+                message="Redirected",
+                data={"url": "/next?step=2"},
+            )
+            monitoring.report(exc=RuntimeError("redirect failed"))
+
+        # Assert
+        [transaction] = collector.payloads("transaction")
+        [event] = collector.payloads("event")
+        names = [span.get("description") for span in transaction["spans"]]
+        assert names == ["aws.s3.GetObject", None]
+        assert event["breadcrumbs"]["values"][-1]["data"]["url"] == "/next"
+
+    def test_exception_messages_are_not_sent(self, collector: SentryCollector) -> None:
+        """If an error or its cause quotes data, then no message should be sent."""
+        # Arrange
+        monitoring = build_sentry_monitoring(**SERVICE, dsn=collector.dsn)
+        error = RuntimeError(SECRET)
+        error.__cause__ = ValueError(SECRET)
+
+        # Act
+        monitoring.report(exc=error)
+
+        # Assert
+        sent = collector.sent()
+        assert "ValueError" in sent
+        assert "RuntimeError" in sent
+        assert SECRET not in sent
 
     @pytest.mark.parametrize(
         argnames="initialised_before",
@@ -313,11 +354,8 @@ class TestSentryPerformance:
         assert [transaction["transaction"] for transaction in transactions] == [
             "/degraded",
         ]
-        errors = [
-            event["exception"]["values"][0]["value"]
-            for event in collector.payloads("event")
-        ]
-        assert "database down" in errors
+        events = collector.payloads("event")
+        assert "/fail" in [event.get("transaction") for event in events]
 
     def test_untraced_path_is_not_measured_in_a_wsgi_app(
         self,

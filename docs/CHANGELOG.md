@@ -22,4 +22,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   measures FastAPI, httpx and SQLAlchemy engines, synchronous or async, and
   sets its tracer provider as the global one.
 - No personal data collected by default in either format: no headers, bodies, query
-  strings, local variables, command line, client IP or user agent.
+  strings, outgoing URL paths, local variables, command line, client IP or user
+  agent. Over the Sentry protocol, exception messages are not sent either.

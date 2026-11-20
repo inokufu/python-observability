@@ -10,6 +10,7 @@ from sentry_sdk.integrations import Integration
 from sentry_sdk.integrations.argv import ArgvIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
+from observability.adapters.urls import origin
 from observability.domain.contract import ContextValue, MonitoringContract
 
 # Each of these is collected by default and may hold personal data.
@@ -29,20 +30,36 @@ _DATA_COLLECTION = {
 }
 
 
-def _drop_query(data: dict[str, Any] | None) -> None:
-    # Outgoing HTTP spans and breadcrumbs keep it whatever data_collection says.
-    if data:
-        data.pop("http.query", None)
+def _scrub_outgoing(data: dict[str, Any] | None) -> None:
+    # Outgoing HTTP spans and breadcrumbs keep the URL whatever data_collection says.
+    if not data:
+        return
+    data.pop("http.query", None)
+    if isinstance(data.get("url"), str):
+        data["url"] = origin(data["url"])
+
+
+def _scrub_event(event: dict[str, Any], _: dict[str, Any]) -> dict[str, Any]:
+    # A message may quote the data that failed, such as a pydantic input.
+    for exception in event.get("exception", {}).get("values", []):
+        exception.pop("value", None)
+    return event
 
 
 def _scrub_transaction(event: dict[str, Any], _: dict[str, Any]) -> dict[str, Any]:
     for span in event.get("spans", []):
-        _drop_query(span.get("data"))
+        _scrub_outgoing(span.get("data"))
+        description = span.get("description")
+        # Other clients share the op, such as boto3 with "aws.s3.GetObject".
+        if span.get("op") == "http.client" and isinstance(description, str):
+            method, _space, url = description.partition(" ")
+            if url:
+                span["description"] = f"{method} {origin(url)}"
     return event
 
 
 def _scrub_breadcrumb(crumb: dict[str, Any], _: dict[str, Any]) -> dict[str, Any]:
-    _drop_query(crumb.get("data"))
+    _scrub_outgoing(crumb.get("data"))
     return crumb
 
 
@@ -96,7 +113,7 @@ class SentryMonitoring(MonitoringContract):
             dsn: Where to send.
             service_name: Tagged on every event as ``service``.
             environment: The deployment environment.
-            release: The service version.
+            release: The service version, sent as ``<service_name>@<release>``.
             trace_propagation_targets: Regular expressions searched in each outgoing
                 URL. Only a matching request receives trace headers.
             untraced_paths: Request paths never measured, such as health checks.
@@ -105,10 +122,12 @@ class SentryMonitoring(MonitoringContract):
         sentry_sdk.init(
             dsn=dsn,
             environment=environment,
-            release=release,
+            # GlitchTip and Sentry share a release across an organization's projects.
+            release=f"{service_name}@{release}",
             traces_sampler=partial(_sample, untraced_paths=frozenset(untraced_paths)),
             trace_propagation_targets=list(trace_propagation_targets),
             data_collection=_DATA_COLLECTION,  # ty: ignore[invalid-argument-type]
+            before_send=_scrub_event,  # ty: ignore[invalid-argument-type]
             before_send_transaction=_scrub_transaction,  # ty: ignore[invalid-argument-type]
             before_breadcrumb=_scrub_breadcrumb,
             # The command line may hold secrets.

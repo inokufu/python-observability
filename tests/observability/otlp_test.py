@@ -278,18 +278,22 @@ class TestOtlpPersonalData:
         collector: OtlpCollector,
         downstream: Callable[[str], str],
     ) -> None:
-        """If URLs carry a query string, then no span should contain it."""
+        """If a URL is sent, then no query nor outgoing path should be."""
+        # Arrange
+        url = downstream("/geocode")
+
         # Act
-        client.get(
-            url="/call",
-            params={"url": downstream("/geocode") + "?q=12+rue+de+la+Paix"},
-        )
+        client.get(url="/call", params={"url": url + "?q=12+rue+de+la+Paix"})
         monitoring.shutdown()
 
         # Assert
         sent = str([_attributes_of(span) for span in collector.spans()])
         assert "Paix" not in sent
-        assert "geocode" in sent
+        assert "geocode" not in sent
+        # Only the default attribute names carry the incoming URL whole.
+        incoming = _attributes_of(collector.server_spans()[0]).get("http.url")
+        assert incoming in {None, "http://testserver/call"}
+        assert url.removesuffix("/geocode") in sent
 
     def test_client_identity_is_not_sent(
         self,
