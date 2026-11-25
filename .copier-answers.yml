@@ -4,7 +4,7 @@ _src_path: git@github.com:inokufu/python-project-template.git
 author_email: contact@inokufu.com
 author_name: Inokufu
 default_branch: main
-min_python_version: '3.14'
+min_python_version: '3.13'
 package_name: observability
 project_description: Error and performance monitoring, over the Sentry protocol or
     OpenTelemetry

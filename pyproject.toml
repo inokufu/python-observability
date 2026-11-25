@@ -1,14 +1,27 @@
 [project]
 name = "observability"
-version = "0.1.0"
+version = "1.0.0"
 description = "Error and performance monitoring, over the Sentry protocol or OpenTelemetry"
 authors = [
   { name = "Inokufu", email = "contact@inokufu.com" }
 ]
 readme = "docs/README.md"
-requires-python = ">= 3.14"
+requires-python = ">= 3.13"
+license = { file = "LICENSE" }
 
 dependencies = [
+]
+
+[project.optional-dependencies]
+sentry = [
+    "sentry-sdk>=2.73.0,<3.0.0",
+]
+otlp = [
+    "opentelemetry-exporter-otlp-proto-http>=1.45.2,<2.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.66b2,<0.67",
+    "opentelemetry-instrumentation-httpx>=0.66b2,<0.67",
+    "opentelemetry-instrumentation-sqlalchemy>=0.66b2,<0.67",
+    "opentelemetry-sdk>=1.45.2,<2.0.0",
 ]
 
 [tool.uv]
@@ -17,22 +30,29 @@ package = true
 
 [dependency-groups]
 dev = [
-    "diff-cover>=11.0.0,<12.0.0",
+    "aiosqlite>=0.22.1,<0.23.0",
+    "diff-cover>=11.0.4,<12.0.0",
+    "fastapi>=0.165.0,<0.166.0",
+    "greenlet>=3.5.6,<4.0.0",
     "griffe-inherited-docstrings>=1.1.4,<2.0.0",
+    "httpx>=0.28.1,<0.29.0",
+    "httpx2>=2.16.2,<3.0.0",
+    "loguru>=0.8.0,<0.9.0",
     "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.8.0,<10.0.0",
-    "mkdocstrings-python>=2.0.10,<3.0.0",
-    "prek>=0.5.8,<0.6.0",
+    "mkdocs-material>=9.8.2,<10.0.0",
+    "mkdocstrings-python>=2.0.11,<3.0.0",
+    "prek>=0.5.11,<0.6.0",
     "pytest>=9.2.0,<10.0.0",
     "pytest-cov>=7.1.0,<8.0.0",
-    "pytest-mock>=3.17.0,<4.0.0",
-    "ruff>=0.17.3,<0.18.0",
-    "ty>=0.0.95,<0.0.103",
+    "pytest-httpserver>=1.2.1,<2.0.0",
+    "ruff>=0.17.6,<0.18.0",
+    "sqlalchemy>=2.1.9,<3.0.0",
+    "ty>=0.0.110,<0.0.111",
 ]
 
 [tool.ruff]
 output-format = "concise"
-target-version = "py314"
+target-version = "py313"
 line-length = 88
 indent-width = 4
 
@@ -66,6 +86,8 @@ lint.extend-unfixable = [
     "S105", # Hardcoded secrets are dummy test fixtures...
     "S106", # ...idem for secrets passed as arguments
 ]
+# The SDKs and the libraries they instrument are optional: imported only where used.
+"src/observability/{builders,adapters/*}.py" = ["PLC0415"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
