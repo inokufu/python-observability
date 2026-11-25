@@ -57,11 +57,16 @@ Key features:
 
 ### Installation
 
-Install the extra matching your destination:
+The package is not on PyPI. Install it from git, with the extra matching your
+destination:
 
 ```sh
-uv add "observability[sentry]"   # a DSN
-uv add "observability[otlp]"     # an OTLP endpoint
+# A DSN
+uv add --tag v1.0.0 \
+  "observability[sentry] @ git+https://github.com/inokufu/python-observability"
+# An OTLP endpoint
+uv add --tag v1.0.0 \
+  "observability[otlp] @ git+https://github.com/inokufu/python-observability"
 ```
 
 ## Usage
